@@ -1,6 +1,8 @@
 # L0 — сервис обработки заказов (Kafka + PostgreSQL + Cache)
 
 Этот проект реализует обработку заказов в реальном времени через Apache Kafka, сохранение данных в PostgreSQL, кэширование в памяти и HTTP-API для получения заказов.
+<img width="1802" height="960" alt="изображение" src="https://github.com/user-attachments/assets/bb6426f6-f235-4a6a-a3e3-8bc09991281a" />
+
 
 ----------------------------------------
 
