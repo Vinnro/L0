@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Поиск заказа по ID</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --card: #121933;
+            --muted: #9aa4bf;
+            --text: #e8edff;
+            --accent: #6ea8ff;
+            --accent-2: #8bd8ff;
+            --danger: #ff6b6b;
+            --success: #5ad786;
+            --radius: 14px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            background: radial-gradient(1200px 600px at 10% 0%, #10163a 0%, var(--bg) 40%), var(--bg);
+            color: var(--text);
+            min-height: 100svh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+        .app {
+            width: 100%;
+            max-width: 860px;
+            background: linear-gradient(160deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+            overflow: hidden;
+        }
+        header {
+            padding: 18px 20px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0));
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        header .logo {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            display: grid; place-items: center; font-weight: 800; color: #0b1020;
+            letter-spacing: -0.02em;
+        }
+        header h1 { font-size: 18px; margin: 0; letter-spacing: 0.2px; }
+
+        .panel { padding: 18px; display: grid; gap: 12px; }
+        .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+        @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+
+        input[type="text"], input[type="url"] {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.03);
+            color: var(--text);
+            outline: none;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+        input::placeholder { color: #9fb0d8a6; }
+        input:focus {
+            border-color: rgba(142, 197, 255, 0.7);
+            box-shadow: 0 0 0 6px rgba(110, 168, 255, 0.15);
+        }
+
+        .btn {
+            appearance: none; border: 0; cursor: pointer; user-select: none;
+            padding: 12px 16px; border-radius: 12px; font-weight: 600; letter-spacing: .2px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0b1020;
+            transition: transform .06s ease, filter .2s ease, box-shadow .2s ease;
+            box-shadow: 0 10px 24px rgba(110,168,255,.25);
+        }
+        .btn:hover { filter: brightness(1.05); }
+        .btn:active { transform: translateY(1px); }
+        .btn.secondary {
+            background: transparent; color: var(--text);
+            border: 1px solid rgba(255,255,255,0.18); box-shadow: none;
+        }
+
+        .hint { font-size: 12px; color: var(--muted); margin-top: -2px; }
+
+        .status { padding: 14px 16px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); display: none; }
+        .status.show { display: block; }
+
+        .grid {
+            display: grid; gap: 16px; padding: 0 18px 18px; grid-template-columns: 1.2fr 1fr;
+        }
+        @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .card h3 { margin: 0 0 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
+        .kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; font-size: 14px; }
+        .kv div.key { color: var(--muted); }
+        .kv div.val { font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+
+        pre.json {
+            margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            background: #0c1229; color: #e6f0ff; border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.08);
+            max-height: 420px; overflow: auto;
+        }
+
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .muted { color: var(--muted); }
+        .sep { height: 1px; background: rgba(255,255,255,0.08); margin: 6px 0 0; }
+
+        .spinner {
+            width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--accent);
+            animation: spin 1s linear infinite; display: inline-block; vertical-align: -3px; margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<div class="app" role="application">
+    <header>
+        <div class="logo" aria-hidden="true">ID</div>
+        <h1>Поиск заказа по ID</h1>
+    </header>
+
+    <div class="panel" id="panel">
+        <label class="hint" for="orderId">Введите идентификатор заказа (order_uid):</label>
+        <div class="row">
+            <input id="orderId" type="text" placeholder="например, testorder456" autocomplete="off" />
+            <button id="btnFetch" class="btn" aria-label="Получить информацию о заказе">Получить</button>
+        </div>
+        <label class="hint" for="orderId">Вставьте json файл заказа для загрузки его в БД</label>
+        <div class="hint">API по умолчанию: <code id="apiBaseHint"></code>.</div>
+
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="grid">
+        <section class="card" aria-labelledby="summaryTitle">
+            <h3 id="summaryTitle">Кратко о заказе</h3>
+            <div class="kv" id="summary">
+                <div class="muted">Пока ничего нет. Введите ID и нажмите «Получить».</div>
+            </div>
+        </section>
+
+        <section class="card" aria-labelledby="rawTitle">
+            <h3 id="rawTitle">Сырые данные (JSON)</h3>
+            <div class="actions" style="margin-bottom:10px">
+                <button class="btn secondary" id="copyBtn">Копировать JSON</button>
+                <button class="btn secondary" id="downloadBtn">Скачать JSON</button>
+            </div>
+            <pre class="json" id="raw">{}</pre>
+        </section>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'http://localhost:8080';
+    async function tryFetchOrder(id) {
+        const safeId = encodeURIComponent(id.trim());
+        const candidates = [
+            `${API_BASE}/orders/${safeId}`,
+            `${API_BASE}/order/${safeId}`,
+            `${API_BASE}/orders?id=${safeId}`,
+            `${API_BASE}/order?id=${safeId}`,
+        ];
+
+        let lastErr;
+        for (const url of candidates) {
+            try {
+                const data = await fetchJSON(url);
+                return { url, data };
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        throw lastErr || new Error('Не удалось получить заказ');
+    }
+
+    async function fetchJSON(url) {
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`HTTP ${res.status}${text ? `: ${text.slice(0,200)}` : ''}`);
+        }
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) return res.json();
+        const t = await res.text();
+        try { return JSON.parse(t); } catch { throw new Error('Ответ не в формате JSON'); }
+    }
+
+    function byId(id) { return document.getElementById(id); }
+    const $orderId = byId('orderId');
+    const $btn = byId('btnFetch');
+    const $status = byId('status');
+    const $summary = byId('summary');
+    const $raw = byId('raw');
+    const $copy = byId('copyBtn');
+    const $download = byId('downloadBtn');
+    const $apiBaseHint = byId('apiBaseHint');
+
+    $apiBaseHint.textContent = API_BASE;
+
+    function setStatus(message, type = 'info') {
+        $status.classList.add('show');
+        $status.style.borderColor = type === 'error' ? 'rgba(255,107,107,.35)' : 'rgba(255,255,255,0.08)';
+        $status.innerHTML = message;
+    }
+    function clearStatus() { $status.classList.remove('show'); $status.textContent = ''; }
+
+    function formatCurrency(amount, currency) {
+        if (typeof amount !== 'number') return String(amount ?? '');
+        try { return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: (currency || 'RUB').toUpperCase() }).format(amount/100); } catch {
+            return amount;
+        }
+    }
+
+    function renderSummary(data) {
+        const d = data || {};
+        const delivery = d.delivery || {};
+        const payment = d.payment || {};
+        const items = Array.isArray(d.items) ? d.items : [];
+
+        const fields = [
+            ['ID заказа', d.order_uid ?? d.id ?? '—'],
+            ['Трек-номер', d.track_number ?? '—'],
+            ['Покупатель', delivery.name || '—'],
+            ['Телефон', delivery.phone || '—'],
+            ['Город', delivery.city || '—'],
+            ['Адрес', delivery.address || '—'],
+            ['Сумма', (payment.amount != null ? formatCurrency(payment.amount, payment.currency) : '—')],
+            ['Валюта', (payment.currency || '—').toUpperCase()],
+            ['Количество позиций', String(items.length)],
+            ['Создан', d.date_created ? new Date(d.date_created).toLocaleString('ru-RU') : '—'],
+            ['Служба доставки', d.delivery_service || '—'],
+        ];
+
+        if (!Object.keys(d).length) {
+            $summary.innerHTML = '<div class="muted">Данных нет</div>';
+            return;
+        }
+
+        $summary.innerHTML = fields.map(([k, v]) => (
+            `<div class="key">${k}</div><div class="val">${escapeHtml(String(v))}</div>`
+        )).join('');
+    }
+
+    function renderRaw(data) {
+        try {
+            $raw.textContent = JSON.stringify(data, null, 2);
+        } catch { $raw.textContent = String(data); }
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    }
+
+    async function handleFetch() {
+        const id = $orderId.value.trim();
+        if (!id) {
+            setStatus('Введите ID заказа.', 'error');
+            return;
+        }
+        setStatus(`<span class="spinner"></span>Загружаем данные…`);
+        try {
+            const { url, data } = await tryFetchOrder(id);
+            setStatus(`Готово. Источник: <code>${escapeHtml(url)}</code>`);
+            renderSummary(data);
+            renderRaw(data);
+        } catch (e) {
+            setStatus(`<span style="color: var(--danger)">Ошибка:</span> ${escapeHtml(e.message || String(e))}`, 'error');
+            renderSummary({});
+            renderRaw({});
+        }
+    }
+    $btn.addEventListener('click', handleFetch);
+    $orderId.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleFetch(); });
+
+    $copy.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText($raw.textContent);
+            setStatus('JSON скопирован в буфер обмена.');
+        } catch (e) {
+            setStatus('Не удалось скопировать JSON. ' + (e.message || ''), 'error');
+        }
+    });
+
+    $download.addEventListener('click', () => {
+        const id = ($orderId.value || 'order').trim() || 'order';
+        const blob = new Blob([$raw.textContent || '{}'], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${id}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    });
+    window.addEventListener('DOMContentLoaded', () => $orderId.focus());
+</script>
+</body>
+</html>
