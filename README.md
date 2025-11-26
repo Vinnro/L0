@@ -1,4 +1,4 @@
-Микросервис для обработки заказов с использованием Apache Kafka, PostgreSQL, LRU-кэша, Retry-механизма, DLQ и Prometheus-метрик.
+## Микросервис для обработки заказов с использованием Apache Kafka, PostgreSQL, LRU-кэша, Retry-механизма, DLQ и Prometheus-метрик.
 
 Проект демонстрирует полноценный production-pipeline обработки сообщений:
 
