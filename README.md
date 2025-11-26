@@ -4,6 +4,8 @@
 <img width="1795" height="956" alt="изображение" src="https://github.com/user-attachments/assets/44144d31-3db3-4769-a5aa-63fecaef2024" />
 
 
+
+
 ----------------------------------------
 
 ## Возможности
