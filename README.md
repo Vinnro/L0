@@ -1,5 +1,3 @@
-<img width="1797" height="962" alt="изображение" src="https://github.com/user-attachments/assets/cc3276a4-9643-4033-840f-8051514cc3cb" /># L0 — Order Processing Service
-
 Микросервис для обработки заказов с использованием Apache Kafka, PostgreSQL, LRU-кэша, Retry-механизма, DLQ и Prometheus-метрик.
 
 Проект демонстрирует полноценный production-pipeline обработки сообщений:
