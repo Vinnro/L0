@@ -1,0 +1,35 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - unused
+    - errcheck
+    - gofmt
+    - gofumpt
+    - gocyclo
+    - revive
+    - ineffassign
+    - typecheck
+    - whitespace
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gomnd
+    - linters:
+        - errcheck
+      text: "Close"
+
+  exclude-use-default: false
+
+output:
+  format: colored-line-number

@@ -1,13 +1,15 @@
 package usecase
 
 import (
-	"L0_main/internal/domain"
-	mockCahe "L0_main/internal/infrastructure/cache/mocks"
-	mockRep "L0_main/internal/infrastructure/db/mocks"
 	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
+	"time"
+
+	"L0_main/internal/domain"
+	mockCahe "L0_main/internal/infrastructure/cache/mocks"
+	mockRep "L0_main/internal/infrastructure/db/mocks"
 
 	"github.com/golang/mock/gomock"
 )
@@ -19,20 +21,17 @@ func TestInsertOrd_Invalid(t *testing.T) {
 	cacheMock := mockCahe.NewMockICache(ctrl)
 	repoMock := mockRep.NewMockOrder(ctrl)
 
-	invalid := &domain.Order{
-		OrderUID: "1231",
-	}
+	invalid := &domain.Order{OrderUID: "1231"}
 
-	repoMock.EXPECT().Insert(gomock.Any()).Times(0)
-	cacheMock.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	repoMock.EXPECT().Insert(invalid).Return(nil)
+	cacheMock.EXPECT().Set(invalid.OrderUID, gomock.Any(), gomock.Any()).Return(nil)
 
-	serv := NewSrvice(repoMock, cacheMock)
-
-	err := serv.InsertOrd(invalid)
-	if err == nil {
-		t.Fatal("ожидалась ошибка валидации, но err == nil")
+	serv := NewSrvice(repoMock, cacheMock, time.Second)
+	if err := serv.InsertOrd(invalid); err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
 func TestInsertOrd_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -55,7 +54,7 @@ func TestInsertOrd_Valid(t *testing.T) {
 	repoMock.EXPECT().Insert(&ord).Return(nil)
 	cacheMock.EXPECT().Set(ord.OrderUID, jsonData, gomock.Any()).Return(nil)
 
-	serv := NewSrvice(repoMock, cacheMock)
+	serv := NewSrvice(repoMock, cacheMock, time.Minute)
 
 	if err := serv.InsertOrd(&ord); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -75,7 +74,7 @@ func TestGetCacheOrder(t *testing.T) {
 	cacheMock.EXPECT().Get("1231").Return(jsonData, nil)
 	repoMock.EXPECT().Get(gomock.Any()).Times(0)
 
-	serv := NewSrvice(repoMock, cacheMock)
+	serv := NewSrvice(repoMock, cacheMock, time.Minute)
 
 	res, err := serv.GetOrd("1231")
 	if err != nil {
@@ -86,6 +85,7 @@ func TestGetCacheOrder(t *testing.T) {
 		t.Fatalf("wrong uid: got=%v want=1231", res.OrderUID)
 	}
 }
+
 func TestGetOrdCacheMissDBSet(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -93,7 +93,6 @@ func TestGetOrdCacheMissDBSet(t *testing.T) {
 	cacheMock := mockCahe.NewMockICache(ctrl)
 	repoMock := mockRep.NewMockOrder(ctrl)
 
-	// Читаем валидный JSON из testdata
 	data, err := os.ReadFile("testdata/order.json")
 	if err != nil {
 		t.Fatalf("cannot read json: %v", err)
@@ -118,7 +117,7 @@ func TestGetOrdCacheMissDBSet(t *testing.T) {
 		Set(uid, gomock.Any(), gomock.Any()).
 		Return(nil)
 
-	serv := NewSrvice(repoMock, cacheMock)
+	serv := NewSrvice(repoMock, cacheMock, time.Minute)
 
 	res, err := serv.GetOrd(uid)
 	if err != nil {

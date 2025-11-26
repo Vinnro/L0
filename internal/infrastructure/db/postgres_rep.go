@@ -1,11 +1,14 @@
 package db
 
 import (
-	"L0_main/internal/domain"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
+
+	"L0_main/internal/domain"
+
+	"github.com/segmentio/kafka-go"
 )
 
 type Postgres struct {
@@ -220,7 +223,12 @@ func (p *Postgres) Get(UID string) (*domain.Order, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get items: %w", err)
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("failed to close rows: %v", err)
+		}
+	}(rows)
 
 	var items []domain.Item
 	for rows.Next() {
@@ -254,7 +262,12 @@ func (p *Postgres) GetAll() ([]domain.Order, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Printf("failed to close rows: %v", err)
+		}
+	}(rows)
 
 	var result []domain.Order
 
@@ -273,4 +286,43 @@ func (p *Postgres) GetAll() ([]domain.Order, error) {
 	}
 
 	return result, nil
+}
+func Header(msg kafka.Message, key string) string {
+	for _, h := range msg.Headers {
+		if string(h.Key) == key {
+			return string(h.Value)
+		}
+	}
+	return ""
+}
+
+func (p *Postgres) InsertIntoDLQ(msg kafka.Message) error {
+	tx, err := p.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("failed to rollback transaction: %v\n", err)
+		}
+	}()
+	_, err = tx.Exec(`
+	INSERT INTO dlq(
+	                topic, key, value,
+	                error_type, error_message,created_at)VALUES ($1, $2, $3, $4, $5, $6)`,
+		msg.Topic,
+		msg.Key,
+		msg.Value,
+		Header(msg, "error_type"),
+		Header(msg, "error_message"),
+		msg.Time,
+	)
+	if err != nil {
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
 }

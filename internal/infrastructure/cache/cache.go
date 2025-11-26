@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/coocood/freecache"
-	_ "github.com/coocood/freecache"
 )
 
 type Cache struct {

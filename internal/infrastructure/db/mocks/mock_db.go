@@ -10,6 +10,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
+	"github.com/segmentio/kafka-go"
 )
 
 // MockICache is a mock of ICache interface.
@@ -82,6 +83,11 @@ func (mr *MockICacheMockRecorder) Set(key, value, expire interface{}) *gomock.Ca
 type MockOrder struct {
 	ctrl     *gomock.Controller
 	recorder *MockOrderMockRecorder
+}
+
+func (m *MockOrder) InsertIntoDLQ(msg kafka.Message) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 // MockOrderMockRecorder is the mock recorder for MockOrder.

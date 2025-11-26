@@ -1,10 +1,13 @@
 package usecase
 
 import (
-	"L0_main/internal/domain"
 	"encoding/json"
 	"log"
 	"time"
+
+	"L0_main/internal/domain"
+
+	"github.com/segmentio/kafka-go"
 )
 
 type ICache interface {
@@ -17,30 +20,29 @@ type Order interface {
 	Insert(order *domain.Order) error
 	Get(Uid string) (*domain.Order, error)
 	GetAll() ([]domain.Order, error)
+	InsertIntoDLQ(msg kafka.Message) error
 }
 
 type OrdService struct {
 	rep   Order
 	cache ICache
+	ttl   time.Duration
 }
 
-func NewSrvice(rep Order, cache ICache) *OrdService {
-	return &OrdService{rep: rep, cache: cache}
+func NewSrvice(rep Order, cache ICache, TTL time.Duration) *OrdService {
+	return &OrdService{rep: rep, cache: cache, ttl: TTL}
 }
 
 func (s *OrdService) InsertOrd(order *domain.Order) error {
-	if err := order.Validate(); err != nil {
-		log.Printf("Данные не валидны")
-		return err
-	}
 	err := s.rep.Insert(order)
 	if err != nil {
 		return err
 	}
-
 	Data, err := json.Marshal(&order)
 	if err == nil {
-		_ = s.cache.Set(order.OrderUID, Data, 0)
+		if err := s.cache.Set(order.OrderUID, Data, s.ttl); err != nil {
+			log.Printf("Ошибка записи в кэш: %v", err)
+		}
 		log.Printf("Заказ uid: %s успешно добавлен в кэш", order.OrderUID)
 	}
 	return nil
@@ -60,7 +62,10 @@ func (s *OrdService) GetOrd(uid string) (*domain.Order, error) {
 		return nil, err
 	}
 	bytes, _ := json.Marshal(ord)
-	s.cache.Set(uid, bytes, time.Minute)
+	err = s.cache.Set(uid, bytes, time.Minute)
+	if err != nil {
+		return nil, err
+	}
 
 	return ord, nil
 }
@@ -72,9 +77,19 @@ func (s *OrdService) WarmUpCache() error {
 	}
 	for _, ord := range orders {
 		data, _ := json.Marshal(ord)
-		s.cache.Set(ord.OrderUID, data, 60*time.Second)
+		if err := s.cache.Set(ord.OrderUID, data, s.ttl); err != nil {
+			return err
+		}
 		log.Printf("%s", ord.OrderUID)
 	}
 	log.Printf("Кэш успешно загружен (%d записей)", len(orders))
+	return nil
+}
+func (s *OrdService) InsertDLQ(msg kafka.Message) error {
+	err := s.rep.InsertIntoDLQ(msg)
+	if err != nil {
+		log.Printf("Ошибка вставки поврежденного заказа в БД: %v", err)
+	}
+	log.Printf("Успешная вставка поврежденного заказа в базу DLQ")
 	return nil
 }
